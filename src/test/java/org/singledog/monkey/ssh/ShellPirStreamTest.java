@@ -1,27 +1,18 @@
 package org.singledog.monkey.ssh;
 
 import com.jcraft.jsch.*;
-import expect4j.Closure;
-import expect4j.Expect4j;
-import expect4j.ExpectState;
-import expect4j.matches.Match;
-import expect4j.matches.RegExpMatch;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 
 /**
  * Created by Adam.Wu on 2016/8/2.
  */
-public class ShellTestExpectj {
-
-    //正则匹配，用于处理服务器返回的结果
-    public static String[] linuxPromptRegEx = new String[] { "%"};
-//    public static String[] linuxPromptRegEx = new String[] { "~]#", "~#", "#",
-//            ":~#", "/$" };
+public class ShellPirStreamTest {
 
     public static void main(String[] args) throws Exception {
+
         JSch jSch = new JSch();
 
         Session session=jSch.getSession("root", "192.168.1.12", 22);
@@ -57,54 +48,36 @@ public class ShellTestExpectj {
         Channel channel=session.openChannel("shell");
         channel.connect();
 
-        StringBuilder buffer = new StringBuilder();
+        PipedInputStream pipeIn = new PipedInputStream();
+        PipedOutputStream pipeOut = new PipedOutputStream(pipeIn);
+        channel.setInputStream( pipeIn );
+        channel.setOutputStream(System.out);
 
-        Closure closure = new Closure() {
-            public void run(ExpectState expectState) throws Exception {
-                buffer.delete(0, buffer.length());
-                buffer.append(expectState.getBuffer());// buffer is string
-                // buffer for appending
-                // output of executed
-                // command
-                expectState.exp_continue();
+        String command = "cd /tmp \n";
+        pipeOut.write(command.getBytes());
+        pipeOut.flush();
 
-            }
-        };
+        Thread.sleep(10000);
+        command = "pwd \n";
+        pipeOut.write(command.getBytes());
+        pipeOut.flush();
 
-        List<Match> lstPattern = new ArrayList<Match>();
-        for (String s : linuxPromptRegEx) {
-            RegExpMatch mat = new RegExpMatch(s, closure);
-            lstPattern.add(mat);
-        }
+        Thread.sleep(10000);
+        command = "echo 'SDGFSDGFDFSGSEGSDGF' >> aa.txt \n";
+        pipeOut.write(command.getBytes());
+        pipeOut.flush();
 
+        Thread.sleep(10000);
+        command = "cat aa.txt \n";
+        pipeOut.write(command.getBytes());
+        pipeOut.flush();
 
-        Expect4j expect4j = new Expect4j(channel.getInputStream(), channel.getOutputStream());
-        int i = expect4j.expect(lstPattern);
-        expect4j.send("cd /tmp " + "\r");
+        Thread.sleep(10000);
+        command = "exit \n";
+        pipeOut.write(command.getBytes());
+        pipeOut.flush();
 
-        expect4j.expect(lstPattern);
-        System.out.println("1>>>> " + buffer.toString());
-
-        expect4j.expect(lstPattern);
-        expect4j.send("pwd " + "\r");
-
-        expect4j.expect(lstPattern);
-        System.out.println("2>>>> " + buffer.toString());
-
-        expect4j.expect(lstPattern);
-        expect4j.send(" echo 'SDFSSDGFSDGDFG' >> test.a " + "\r");
-
-        expect4j.expect(lstPattern);
-        System.out.println("3>>>> " + buffer.toString());
-
-        expect4j.send(" cat test.a " + "\r");
-
-        expect4j.expect(lstPattern);
-        System.out.println("4>>>> " + buffer.toString());
-
-        expect4j.send("exit \r");
-        expect4j.expect(lstPattern);
-        System.out.println("5>>>> " + buffer.toString());
+        Thread.sleep(10000);
     }
 
     public static abstract class MyUserInfo

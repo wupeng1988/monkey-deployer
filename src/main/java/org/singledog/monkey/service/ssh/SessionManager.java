@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 /**
@@ -89,6 +90,11 @@ public class SessionManager implements Closeable {
                 session.setPassword(password);
             }
 
+            Hashtable<String,String> config = new Hashtable<String,String>();
+            config.put("StrictHostKeyChecking", "no");
+            config.put("PreferredAuthentications",
+                    "publickey,keyboard-interactive,password");//makes kerberos happy
+            session.setConfig(config);
             session.setUserInfo(new SimpleUserInfo(password));
             sessions.put(key, session);
         }
